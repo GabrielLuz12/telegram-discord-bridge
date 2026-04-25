@@ -1,9 +1,5 @@
 package com.bridge.config;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-
 public class AppConfig {
     private final String discordToken;
     private final long discordChannelId;
@@ -28,22 +24,15 @@ public class AppConfig {
         this.httpTimeoutSeconds = httpTimeoutSeconds;
     }
 
-    public static AppConfig load() throws IOException {
-        Properties props = new Properties();
+    public static AppConfig load() {
+        String discordToken = requiredEnv("DISCORD_TOKEN");
+        long discordChannelId = Long.parseLong(requiredEnv("DISCORD_CHANNEL_ID"));
 
-        try (InputStream in = AppConfig.class.getClassLoader().getResourceAsStream("application.properties")) {
-            if (in == null) {
-                throw new IOException("Arquivo application.properties não encontrado.");
-            }
-            props.load(in);
-        }
+        String telegramToken = requiredEnv("TELEGRAM_TOKEN");
+        long telegramChatId = Long.parseLong(requiredEnv("TELEGRAM_CHAT_ID"));
 
-        String discordToken = required(props, "discord.token");
-        long discordChannelId = Long.parseLong(required(props, "discord.channelId"));
-        String telegramToken = required(props, "telegram.token");
-        long telegramChatId = Long.parseLong(required(props, "telegram.chatId"));
-        int pollTimeoutSeconds = Integer.parseInt(props.getProperty("bridge.pollTimeoutSeconds", "30"));
-        int httpTimeoutSeconds = Integer.parseInt(props.getProperty("bridge.httpTimeoutSeconds", "20"));
+        int pollTimeoutSeconds = Integer.parseInt(optionalEnv("POLL_TIMEOUT_SECONDS", "30"));
+        int httpTimeoutSeconds = Integer.parseInt(optionalEnv("HTTP_TIMEOUT_SECONDS", "20"));
 
         return new AppConfig(
                 discordToken,
@@ -55,12 +44,19 @@ public class AppConfig {
         );
     }
 
-    private static String required(Properties props, String key) {
-        String value = props.getProperty(key);
+    private static String requiredEnv(String key) {
+        String value = System.getenv(key);
+
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Configuração obrigatória ausente: " + key);
+            throw new IllegalArgumentException("Variável de ambiente obrigatória ausente: " + key);
         }
+
         return value.trim();
+    }
+
+    private static String optionalEnv(String key, String defaultValue) {
+        String value = System.getenv(key);
+        return value == null || value.isBlank() ? defaultValue : value.trim();
     }
 
     public String getDiscordToken() {
